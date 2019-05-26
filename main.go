@@ -40,14 +40,14 @@ func read(db *mongo.Database, file string) error {
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(1)}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
+			Options: options.Index().SetUnique(true).SetSparse(true).SetBackground(true),
 		},
 	)
 	_, _ = nodes.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"coords", bsonx.Int32(1)}},
-			Options: options.Index().SetSphereVersion(2).SetSparse(true),
+			Options: options.Index().SetSphereVersion(2).SetSparse(true).SetBackground(true),
 		},
 	)
 
@@ -56,37 +56,37 @@ func read(db *mongo.Database, file string) error {
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(1)}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
+			Options: options.Index().SetUnique(true).SetSparse(true).SetBackground(true),
 		},
 	)
 	_, _ = ways.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"nodes", bsonx.Int32(1)}},
-			Options: options.Index().SetSparse(true),
+			Options: options.Index().SetSparse(true).SetBackground(true),
 		},
 	)
 
 	relations := db.Collection("relations")
-	_, _ = nodes.Indexes().CreateOne(
+	_, _ = relations.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(1)}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
+			Options: options.Index().SetUnique(true).SetSparse(true).SetBackground(true),
 		},
 	)
-	_, _ = nodes.Indexes().CreateOne(
+	_, _ = relations.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"members.ref", bsonx.Int32(1)}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
+			Options: options.Index().SetUnique(true).SetSparse(true).SetBackground(true),
 		},
 	)
-	_, _ = nodes.Indexes().CreateOne(
+	_, _ = relations.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    bsonx.Doc{{"members.coords", bsonx.Int32(1)}},
-			Options: options.Index().SetSphereVersion(2).SetSparse(true),
+			Options: options.Index().SetSphereVersion(2).SetSparse(true).SetBackground(true),
 		},
 	)
 
