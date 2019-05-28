@@ -31,17 +31,16 @@ func main() {
 	defer client.Disconnect(context.Background())
 	db := client.Database(*dbname)
 	log.Printf("Started import file %s to db %s", *osmfile, *dbname)
-	if *initial {
-		log.Println("Initial import")
-		createIndexes(db)
-		log.Println("Indexes created")
-	} else {
-		log.Println("Diff import")
-	}
+
 	if err := read(db, *osmfile, *initial, *concurrency, *blockSize); err != nil {
 		log.Fatal(err)
 	}
-
+	if *initial {
+		if err := createIndexes(db); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Indexes created")
+	}
 }
 
 func read(db *mongo.Database, file string, initial bool, concurrency int, blockSize int) error {
@@ -207,47 +206,102 @@ func read(db *mongo.Database, file string, initial bool, concurrency int, blockS
 	return nil
 }
 
-func createIndexes(db *mongo.Database) {
+func createIndexes(db *mongo.Database) error {
+	opts := options.CreateIndexes().SetMaxTime(1000)
 	nodes := db.Collection("nodes")
-	simpleIndex(nodes, []string{"osm_id"}, true)
-	simpleIndex(nodes, []string{"tags"}, false)
-	geoIndex(nodes, "location")
+	_, err := nodes.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{
+				{"tags.key", bsonx.Int32(-1)},
+				{"tags.value", bsonx.Int32(-1)},
+			},
+			Options: (options.Index()).SetBackground(true).SetSparse(true),
+		},
+	}, opts)
+	if err != nil {
+		return err
+	}
+	if err := geoIndex(nodes, "location"); err != nil {
+		return err
+	}
 
 	ways := db.Collection("ways")
-	simpleIndex(ways, []string{"osm_id"}, true)
-	simpleIndex(ways, []string{"tags"}, false)
+	_, err = ways.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{
+				{"tags.key", bsonx.Int32(-1)},
+				{"tags.value", bsonx.Int32(-1)},
+			},
+			Options: (options.Index()).SetBackground(true).SetSparse(true),
+		},
+	}, opts)
+	if err != nil {
+		return err
+	}
 
 	relations := db.Collection("relations")
-	simpleIndex(relations, []string{"osm_id"}, true)
-	simpleIndex(relations, []string{"tags"}, false)
-	simpleIndex(relations, []string{"members.ref"}, false)
-	geoIndex(relations, "members.coords")
+	_, err = relations.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		{
+			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+		},
+		{
+			Keys: bsonx.Doc{
+				{"tags.key", bsonx.Int32(-1)},
+				{"tags.value", bsonx.Int32(-1)},
+			},
+			Options: (options.Index()).SetBackground(true).SetSparse(true),
+		},
+		{
+			Keys: bsonx.Doc{{"members.ref", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true),
+		},
+	}, opts)
+	if err != nil {
+		return err
+	}
+	if err := geoIndex(relations, "members.coords"); err != nil {
+		return err
+	}
+	return nil
 }
 
-func convertTags(tags osm.Tags) map[string]string {
-	result := make(map[string]string, len(tags))
+func convertTags(tags osm.Tags) []Tag {
+	result := make([]Tag, 0, len(tags))
 	for _, t := range tags {
-		result[t.Key] = t.Value
+		result = append(result, Tag{
+			Key:   t.Key,
+			Value: t.Value,
+		})
 	}
 	return result
 }
 
-func simpleIndex(col *mongo.Collection, keys []string, unique bool) {
+func simpleIndex(col *mongo.Collection, keys []string, unique bool) error {
 	idxKeys := bsonx.Doc{}
 	for _, e := range keys {
 		idxKeys.Append(e, bsonx.Int32(1))
 	}
-	_, _ = col.Indexes().CreateOne(
+	_, err := col.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys:    idxKeys,
 			Options: options.Index().SetUnique(unique).SetSparse(true).SetBackground(true),
 		},
 	)
+	return err
 }
 
-func geoIndex(col *mongo.Collection, key string) {
-	_, _ = col.Indexes().CreateOne(
+func geoIndex(col *mongo.Collection, key string) error {
+	_, err := col.Indexes().CreateOne(
 		context.Background(),
 		mongo.IndexModel{
 			Keys: bsonx.Doc{{
@@ -256,4 +310,5 @@ func geoIndex(col *mongo.Collection, key string) {
 			Options: options.Index().SetSphereVersion(2).SetSparse(true).SetBackground(true),
 		},
 	)
+	return err
 }

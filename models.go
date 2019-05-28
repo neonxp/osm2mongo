@@ -19,7 +19,7 @@ type Node struct {
 	Visible   bool               `bson:"visible"`
 	Version   int                `bson:"version,omitempty"`
 	Timestamp time.Time          `bson:"timestamp"`
-	Tags      map[string]string  `bson:"tags,omitempty"`
+	Tags      []Tag              `bson:"tags,omitempty"`
 	Location  Coords             `bson:"location"`
 }
 
@@ -30,7 +30,7 @@ type Way struct {
 	Version   int                `bson:"version"`
 	Timestamp time.Time          `bson:"timestamp"`
 	Nodes     []int64            `bson:"nodes"`
-	Tags      map[string]string  `bson:"tags"`
+	Tags      []Tag              `bson:"tags"`
 }
 
 type Relation struct {
@@ -40,7 +40,7 @@ type Relation struct {
 	Version   int                `bson:"version"`
 	Timestamp time.Time          `bson:"timestamp"`
 	Members   []Member           `bson:"members"`
-	Tags      map[string]string  `bson:"tags"`
+	Tags      []Tag              `bson:"tags"`
 }
 
 type Member struct {
@@ -54,4 +54,9 @@ type Member struct {
 	// Orientation is the direction of the way around a ring of a multipolygon.
 	// Only valid for multipolygon or boundary relations.
 	Orientation orb.Orientation `bson:"orienation,omitempty"`
+}
+
+type Tag struct {
+	Key   string `bson:"key"`
+	Value string `bson:"value"`
 }
