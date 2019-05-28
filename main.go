@@ -20,6 +20,7 @@ func main() {
 	dbname := flag.String("dbname", "map", "Mongo database name")
 	osmfile := flag.String("osmfile", "", "OSM file")
 	initial := flag.Bool("initial", false, "Is initial import")
+	indexes := flag.Bool("indexes", false, "Just create indexes")
 	concurrency := flag.Int("concurrency", 16, "Concurrency")
 	blockSize := flag.Int("block", 1000, "Block size to bulk write")
 	flag.Parse()
@@ -30,16 +31,19 @@ func main() {
 	}
 	defer client.Disconnect(context.Background())
 	db := client.Database(*dbname)
-	log.Printf("Started import file %s to db %s", *osmfile, *dbname)
 
-	if err := read(db, *osmfile, *initial, *concurrency, *blockSize); err != nil {
-		log.Fatal(err)
-	}
-	if *initial {
+	if *indexes {
 		if err := createIndexes(db); err != nil {
 			log.Fatal(err)
 		}
 		log.Println("Indexes created")
+		return
+	}
+
+	log.Printf("Started import file %s to db %s", *osmfile, *dbname)
+
+	if err := read(db, *osmfile, *initial, *concurrency, *blockSize); err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -209,10 +213,11 @@ func read(db *mongo.Database, file string, initial bool, concurrency int, blockS
 func createIndexes(db *mongo.Database) error {
 	opts := options.CreateIndexes().SetMaxTime(1000)
 	nodes := db.Collection("nodes")
-	_, err := nodes.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+	log.Println("creating indexes for nodes")
+	created, err := nodes.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
 		},
 		{
 			Keys: bsonx.Doc{
@@ -225,15 +230,18 @@ func createIndexes(db *mongo.Database) error {
 	if err != nil {
 		return err
 	}
+	log.Println(created)
+	log.Println("creating geoindexes for nodes")
 	if err := geoIndex(nodes, "location"); err != nil {
 		return err
 	}
 
+	log.Println("creating indexes for ways")
 	ways := db.Collection("ways")
-	_, err = ways.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+	created, err = ways.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
 		},
 		{
 			Keys: bsonx.Doc{
@@ -246,12 +254,13 @@ func createIndexes(db *mongo.Database) error {
 	if err != nil {
 		return err
 	}
-
+	log.Println(created)
 	relations := db.Collection("relations")
-	_, err = relations.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+	log.Println("creating geoindexes for relations")
+	created, err = relations.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys: bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(true),
+			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
+			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
 		},
 		{
 			Keys: bsonx.Doc{
@@ -261,16 +270,18 @@ func createIndexes(db *mongo.Database) error {
 			Options: (options.Index()).SetBackground(true).SetSparse(true),
 		},
 		{
-			Keys: bsonx.Doc{{"members.ref", bsonx.Int32(-1)}},
+			Keys:    bsonx.Doc{{"members.ref", bsonx.Int32(-1)}},
 			Options: (options.Index()).SetBackground(true).SetSparse(true),
 		},
 	}, opts)
 	if err != nil {
 		return err
 	}
+	log.Println(created)
 	if err := geoIndex(relations, "members.coords"); err != nil {
 		return err
 	}
+	log.Println("indexes created")
 	return nil
 }
 
