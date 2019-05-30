@@ -7,6 +7,8 @@ require (
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/google/go-cmp v0.3.0 // indirect
+	github.com/neonxp/rutina v0.4.3
+	github.com/paulmach/go.geojson v1.4.0
 	github.com/paulmach/orb v0.1.3
 	github.com/paulmach/osm v0.0.1
 	github.com/stretchr/testify v1.3.0 // indirect
