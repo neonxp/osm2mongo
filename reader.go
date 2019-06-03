@@ -9,7 +9,7 @@ import (
 	"github.com/paulmach/osm/osmpbf"
 )
 
-func read(ctx context.Context, file string, nodesCh chan Node, waysCh chan Way, relationsCh chan Relation, concurrency int, layers []string) error {
+func read(ctx context.Context, file string, insertCh chan Object, concurrency int, layers []string) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func read(ctx context.Context, file string, nodesCh chan Node, waysCh chan Way, 
 		o := scanner.Object()
 		switch o := o.(type) {
 		case *osm.Way:
-			if !layersToImport["ways"] {
+			if !layersToImport["ways"] || !o.Visible {
 				continue
 			}
 			nodes := make([]int64, 0, len(o.Nodes))
@@ -43,35 +43,31 @@ func read(ctx context.Context, file string, nodesCh chan Node, waysCh chan Way, 
 				nodes = append(nodes, int64(v.ID))
 			}
 
-			w := Way{
-				OsmID:     int64(o.ID),
+			w := Object{
+				ID:        ID{ID: int64(o.ID), Type: WayType, Version: o.Version},
 				Tags:      convertTags(o.Tags),
-				Nodes:     nodes,
 				Timestamp: o.Timestamp,
-				Version:   o.Version,
-				Visible:   o.Visible,
+				Nodes:     nodes,
 			}
-			waysCh <- w
+			insertCh <- w
 		case *osm.Node:
-			if !layersToImport["nodes"] {
+			if !layersToImport["nodes"] || !o.Visible {
 				continue
 			}
-			n := Node{
-				OsmID: int64(o.ID),
+			w := Object{
+				ID:        ID{ID: int64(o.ID), Type: NodeType, Version: o.Version},
+				Tags:      convertTags(o.Tags),
+				Timestamp: o.Timestamp,
 				Location: Coords{
 					Type: "Point",
 					Coordinates: []float64{
 						o.Lon,
 						o.Lat,
 					}},
-				Tags:      convertTags(o.Tags),
-				Version:   o.Version,
-				Timestamp: o.Timestamp,
-				Visible:   o.Visible,
 			}
-			nodesCh <- n
+			insertCh <- w
 		case *osm.Relation:
-			if !layersToImport["relations"] {
+			if !layersToImport["relations"] || !o.Visible {
 				continue
 			}
 			members := make([]Member, 0, len(o.Members))
@@ -87,22 +83,19 @@ func read(ctx context.Context, file string, nodesCh chan Node, waysCh chan Way, 
 				}
 				members = append(members, Member{
 					Type:        v.Type,
-					Version:     v.Version,
 					Orientation: v.Orientation,
 					Ref:         v.Ref,
 					Role:        v.Role,
 					Location:    location,
 				})
 			}
-			r := Relation{
-				OsmID:     int64(o.ID),
+			w := Object{
+				ID:        ID{ID: int64(o.ID), Type: RelationType, Version: o.Version},
 				Tags:      convertTags(o.Tags),
-				Version:   o.Version,
 				Timestamp: o.Timestamp,
-				Visible:   o.Visible,
 				Members:   members,
 			}
-			relationsCh <- r
+			insertCh <- w
 		}
 	}
 	log.Println("Read done")

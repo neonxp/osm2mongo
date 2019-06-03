@@ -5,7 +5,6 @@ import (
 
 	"github.com/paulmach/orb"
 	"github.com/paulmach/osm"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Coords struct {
@@ -13,34 +12,27 @@ type Coords struct {
 	Coordinates []float64 `json:"coordinates" bson:"coordinates"`
 }
 
-type Node struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	OsmID     int64              `json:"osm_id" bson:"osm_id"`
-	Visible   bool               `json:"visible" bson:"visible"`
-	Version   int                `json:"version,omitempty" bson:"version,omitempty"`
-	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
-	Tags      []Tag              `json:"tags,omitempty" bson:"tags,omitempty"`
-	Location  Coords             `json:"location" bson:"location"`
+type ItemType string
+
+const (
+	NodeType     ItemType = "node"
+	WayType      ItemType = "way"
+	RelationType ItemType = "relation"
+)
+
+type ID struct {
+	ID      int64    `json:"id" bson:"id"`
+	Type    ItemType `json:"type" bson:"type"`
+	Version int      `json:"version" bson:"version"`
 }
 
-type Way struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	OsmID     int64              `json:"osm_id" bson:"osm_id"`
-	Visible   bool               `json:"visible" bson:"visible"`
-	Version   int                `json:"version" bson:"version"`
-	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
-	Nodes     []int64            `json:"nodes" bson:"nodes"`
-	Tags      []Tag              `json:"tags" bson:"tags"`
-}
-
-type Relation struct {
-	ID        primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-	OsmID     int64              `json:"osm_id" bson:"osm_id"`
-	Visible   bool               `json:"visible" bson:"visible"`
-	Version   int                `json:"version" bson:"version"`
-	Timestamp time.Time          `json:"timestamp" bson:"timestamp"`
-	Members   []Member           `json:"members" bson:"members"`
-	Tags      []Tag              `json:"tags" bson:"tags"`
+type Object struct {
+	ID        ID        `json:"_id" bson:"_id"`
+	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
+	Tags      []Tag     `json:"tags" bson:"tags"`
+	Location  Coords    `json:"location,omitempty" bson:"location,omitempty"`
+	Nodes     []int64   `json:"nodes,omitempty" bson:"nodes,omitempty"`
+	Members   []Member  `json:"members,omitempty" bson:"members,omitempty"`
 }
 
 type Member struct {
@@ -48,12 +40,11 @@ type Member struct {
 	Ref  int64    `json:"ref" bson:"ref"`
 	Role string   `json:"role" bson:"role"`
 
-	Version  int
-	Location *Coords `json:"location,omitempty" bson:"location,omitempty"`
+	Location *Coords `json:"location" bson:"location"`
 
 	// Orientation is the direction of the way around a ring of a multipolygon.
 	// Only valid for multipolygon or boundary relations.
-	Orientation orb.Orientation `json:"orienation,omitempty" bson:"orienation,omitempty"`
+	Orientation orb.Orientation `json:"orienation" bson:"orienation"`
 }
 
 type Tag struct {

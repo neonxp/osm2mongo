@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -11,58 +10,9 @@ import (
 
 func createIndexes(db *mongo.Database) error {
 	opts := options.CreateIndexes().SetMaxTime(1000)
-	nodes := db.Collection("nodes")
-	log.Println("creating indexes for nodes")
-	created, err := nodes.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+	nodes := db.Collection("objects")
+	_, err := nodes.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}, {"version", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
-			Keys:    bsonx.Doc{{"tags", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true),
-		},
-	}, opts)
-	if err != nil {
-		return err
-	}
-	log.Println(created)
-	log.Println("creating geoindexes for nodes")
-	if err := geoIndex(nodes, "location"); err != nil {
-		return err
-	}
-
-	log.Println("creating indexes for ways")
-	ways := db.Collection("ways")
-	created, err = ways.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
-		{
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}, {"version", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
-			Keys:    bsonx.Doc{{"tags", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true),
-		},
-	}, opts)
-	if err != nil {
-		return err
-	}
-	log.Println(created)
-
-	relations := db.Collection("relations")
-	log.Println("creating geoindexes for relations")
-	created, err = relations.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
-		{
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
-			Keys:    bsonx.Doc{{"osm_id", bsonx.Int32(-1)}, {"version", bsonx.Int32(-1)}},
-			Options: (options.Index()).SetBackground(true).SetSparse(true).SetUnique(false),
-		}, {
 			Keys:    bsonx.Doc{{"tags", bsonx.Int32(-1)}},
 			Options: (options.Index()).SetBackground(true).SetSparse(true),
 		},
@@ -74,11 +24,9 @@ func createIndexes(db *mongo.Database) error {
 	if err != nil {
 		return err
 	}
-	log.Println(created)
-	if err := geoIndex(relations, "members.coords"); err != nil {
+	if err := geoIndex(nodes, "location"); err != nil {
 		return err
 	}
-	log.Println("indexes created")
 	return nil
 }
 

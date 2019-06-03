@@ -4,22 +4,22 @@ Simple loader from osm dump file to mongodb. Based on https://github.com/paulmac
 
 ## Build
 
-`go build -o osm2go`
+`go build -o osm2mgo`
 
 ## Usage
 
-`./osm2go -osmfile=PATH_TO_OSM_FILE`
+`./osm2mgo flags`
 
-All flags:
+### Flags:
 
-* `-osmfile` (required) OSM file
-* `-initial` (default:false) Is initial import (uses insert, not upsert)
-* `-indexes` (default:false) Create indexes (needs only first time)
-* `-dbconnection` (default:"mongodb://localhost:27017") Mongo database name
-* `-dbname` (default:"map") Mongo database name
-* `-layers` (default:"nodes,ways,relations") Layers to import
-* `-block` (default:1000) Block size to bulk write
-* `-concurrency` (default:32) Concurrency read and write
+* `-osmfile string` Path to OSM file (PBF format only) (default "./RU.osm.pbf")
+* `-dbconnection string` Mongo database name (default "mongodb://localhost:27017")
+* `-dbname string` Mongo database name (default "map")
+* `-initial` Is initial import?
+* `-indexes` Create indexes
+* `-layers string` Layers to import (default "nodes,ways,relations")
+* `-concurrency int` Workers count (default 32)
+* `-block int` Block size to bulk write (default 1000)
 
 ## Example
 
